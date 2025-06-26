@@ -35,8 +35,12 @@ const Dashboard = () => {
   const [employees, setEmployees] = useState<Employee[]>(mockEmployees);
   const [hiringData, setHiringData] = useState<Hiring[]>(mockHiringData);
   const [isAdmin] = useState(true);
-  const [selectedEmployees, setSelectedEmployees] = useState<number[]>([]);
-  const [selectedHiring, setSelectedHiring] = useState<number[]>([]);
+  const [selectedEmployees, setSelectedEmployees] = useState<string[]>([]);
+  const [selectedHiring, setSelectedHiring] = useState<string[]>([]);
+
+  // Sorting state
+  const [employeeSortConfig, setEmployeeSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' } | null>(null);
+  const [hiringSortConfig, setHiringSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' } | null>(null);
 
   // Modal states
   const [confirmationModal, setConfirmationModal] = useState<{
@@ -62,20 +66,68 @@ const Dashboard = () => {
   const [editHiringModal, setEditHiringModal] = useState<{
     isOpen: boolean;
     hiring: Hiring | null;
-    index: number;
   }>({
     isOpen: false,
-    hiring: null,
-    index: -1
+    hiring: null
   });
 
   const [isAddPersonModal, setIsAddPersonModal] = useState<boolean>(false);
   const [isAddMultipleModal, setIsAddMultipleModal] = useState<boolean>(false);
 
-  // Memoized data calculations
+  // Sorting functions
+  const sortData = useCallback((data: any[], sortConfig: { key: string; direction: 'asc' | 'desc' } | null) => {
+    if (!sortConfig) return data;
+
+    return [...data].sort((a, b) => {
+      const aValue = a[sortConfig.key];
+      const bValue = b[sortConfig.key];
+
+      if (aValue === null || aValue === undefined) return 1;
+      if (bValue === null || bValue === undefined) return -1;
+
+      if (typeof aValue === 'string' && typeof bValue === 'string') {
+        const comparison = aValue.toLowerCase().localeCompare(bValue.toLowerCase());
+        return sortConfig.direction === 'asc' ? comparison : -comparison;
+      }
+
+      if (aValue < bValue) return sortConfig.direction === 'asc' ? -1 : 1;
+      if (aValue > bValue) return sortConfig.direction === 'asc' ? 1 : -1;
+      return 0;
+    });
+  }, []);
+
+  const handleEmployeeSort = useCallback((key: string) => {
+    setEmployeeSortConfig(current => {
+      if (current?.key === key) {
+        return { key, direction: current.direction === 'asc' ? 'desc' : 'asc' };
+      }
+      return { key, direction: 'asc' };
+    });
+  }, []);
+
+  const handleHiringSort = useCallback((key: string) => {
+    setHiringSortConfig(current => {
+      if (current?.key === key) {
+        return { key, direction: current.direction === 'asc' ? 'desc' : 'asc' };
+      }
+      return { key, direction: 'asc' };
+    });
+  }, []);
+
+  // Memoized sorted data
+  const sortedEmployees = useMemo(() => 
+    sortData(employees, employeeSortConfig), 
+    [employees, employeeSortConfig, sortData]
+  );
+
+  const sortedHiringData = useMemo(() => 
+    sortData(hiringData, hiringSortConfig), 
+    [hiringData, hiringSortConfig, sortData]
+  );
+
   const currentData = useMemo(() => 
-    selectedPage === 'Hiring' ? hiringData : employees, 
-    [selectedPage, hiringData, employees]
+    selectedPage === 'Hiring' ? sortedHiringData : sortedEmployees, 
+    [selectedPage, sortedHiringData, sortedEmployees]
   );
 
   const paginatedData = useMemo(() => {
@@ -138,10 +190,12 @@ const Dashboard = () => {
     setCurrentPage(1);
     setGoToPage('');
     setEntriesPerPage(50);
+    setEmployeeSortConfig(null);
+    setHiringSortConfig(null);
   }, []);
 
   // Employee handlers
-  const handleSelectEmployee = useCallback((empId: number) => {
+  const handleSelectEmployee = useCallback((empId: string) => {
     setSelectedEmployees(prev =>
       prev.includes(empId)
         ? prev.filter(id => id !== empId)
@@ -151,24 +205,36 @@ const Dashboard = () => {
 
   const handleSelectAllEmployees = useCallback((selected: boolean) => {
     if (selected) {
-      setSelectedEmployees(employees.map(emp => emp.emp_id));
+      setSelectedEmployees(employees.map(emp => emp.id));
     } else {
       setSelectedEmployees([]);
     }
   }, [employees]);
 
-  const handleDeleteEmployee = useCallback((empId: number) => {
-    const employee = employees.find(emp => emp.emp_id === empId);
+  const handleDeleteEmployee = useCallback((empId: string) => {
+    const employee = employees.find(emp => emp.id === empId);
     setConfirmationModal({
       isOpen: true,
       title: 'Delete Employee',
-      message: `Are you sure you want to delete ${employee?.resource_name}? This action cannot be undone.`,
+      message: `Are you sure you want to delete ${employee?.name}? This action cannot be undone.`,
       onConfirm: () => {
-        setEmployees(prev => prev.filter(emp => emp.emp_id !== empId));
+        setEmployees(prev => prev.filter(emp => emp.id !== empId));
         setSelectedEmployees(prev => prev.filter(id => id !== empId));
       }
     });
   }, [employees]);
+
+  const handleDeleteSelectedEmployees = useCallback(() => {
+    setConfirmationModal({
+      isOpen: true,
+      title: 'Delete Selected Employees',
+      message: `Are you sure you want to delete ${selectedEmployees.length} selected employees? This action cannot be undone.`,
+      onConfirm: () => {
+        setEmployees(prev => prev.filter(emp => !selectedEmployees.includes(emp.id)));
+        setSelectedEmployees([]);
+      }
+    });
+  }, [selectedEmployees]);
 
   const handleEditEmployee = useCallback((employee: Employee) => {
     setEditEmployeeModal({
@@ -180,53 +246,64 @@ const Dashboard = () => {
   const handleSaveEmployee = useCallback((updatedEmployee: Employee) => {
     setEmployees(prev =>
       prev.map(emp =>
-        emp.emp_id === updatedEmployee.emp_id ? updatedEmployee : emp
+        emp.id === updatedEmployee.id ? updatedEmployee : emp
       )
     );
   }, []);
 
   // Hiring handlers
-  const handleSelectHiring = useCallback((index: number) => {
+  const handleSelectHiring = useCallback((id: string) => {
     setSelectedHiring(prev =>
-      prev.includes(index)
-        ? prev.filter(id => id !== index)
-        : [...prev, index]
+      prev.includes(id)
+        ? prev.filter(hId => hId !== id)
+        : [...prev, id]
     );
   }, []);
 
   const handleSelectAllHiring = useCallback((selected: boolean) => {
     if (selected) {
-      setSelectedHiring(hiringData.map((_, index) => index));
+      setSelectedHiring(hiringData.map(hiring => hiring.id));
     } else {
       setSelectedHiring([]);
     }
   }, [hiringData]);
 
-  const handleDeleteHiring = useCallback((index: number) => {
-    const hiring = hiringData[index];
+  const handleDeleteHiring = useCallback((id: string) => {
+    const hiring = hiringData.find(h => h.id === id);
     setConfirmationModal({
       isOpen: true,
       title: 'Delete Hiring Record',
       message: `Are you sure you want to delete the hiring record for ${hiring?.team}? This action cannot be undone.`,
       onConfirm: () => {
-        setHiringData(prev => prev.filter((_, i) => i !== index));
-        setSelectedHiring(prev => prev.filter(id => id !== index));
+        setHiringData(prev => prev.filter(h => h.id !== id));
+        setSelectedHiring(prev => prev.filter(hId => hId !== id));
       }
     });
   }, [hiringData]);
 
-  const handleEditHiring = useCallback((hiring: Hiring, index: number) => {
+  const handleDeleteSelectedHiring = useCallback(() => {
+    setConfirmationModal({
+      isOpen: true,
+      title: 'Delete Selected Hiring Records',
+      message: `Are you sure you want to delete ${selectedHiring.length} selected hiring records? This action cannot be undone.`,
+      onConfirm: () => {
+        setHiringData(prev => prev.filter(h => !selectedHiring.includes(h.id)));
+        setSelectedHiring([]);
+      }
+    });
+  }, [selectedHiring]);
+
+  const handleEditHiring = useCallback((hiring: Hiring) => {
     setEditHiringModal({
       isOpen: true,
-      hiring,
-      index
+      hiring
     });
   }, []);
 
-  const handleSaveHiring = useCallback((updatedHiring: Hiring, index: number) => {
+  const handleSaveHiring = useCallback((updatedHiring: Hiring) => {
     setHiringData(prev =>
-      prev.map((hiring, i) =>
-        i === index ? updatedHiring : hiring
+      prev.map(hiring =>
+        hiring.id === updatedHiring.id ? updatedHiring : hiring
       )
     );
   }, []);
@@ -235,12 +312,12 @@ const Dashboard = () => {
     if (selectedPage === 'Hiring') {
       const headers = [
         "Team",
-        "REQ/FG",
+        "Requisition Type",
         "Sharepoint ID",
-        "Incremental/Backfill",
-        "Skill Set",
-        "EL Level",
-        "Resource",
+        "Incremental Type",
+        "Skills",
+        "Experience Level",
+        "Candidate Name",
         "Remarks",
         "Status",
         "Vendor",
@@ -249,22 +326,22 @@ const Dashboard = () => {
 
       const rows = hiringData.map(hiring => [
         hiring.team,
-        hiring.req_fg,
-        hiring.sharepoint_id,
-        hiring.incremental_backfill,
-        hiring.skill_set,
-        hiring.el_level,
-        hiring.resource,
-        hiring.remarks,
+        hiring.requisitionType || '',
+        hiring.sharepointId || '',
+        hiring.incrementalType || '',
+        hiring.skills.join(', '),
+        hiring.experienceLevel || '',
+        hiring.candidateName,
+        hiring.remarks || '',
         hiring.status,
-        hiring.vendor,
-        hiring.hiring_manager
+        hiring.vendor || '',
+        hiring.hiringManager
       ]);
 
       let csvContent =
         headers.join(",") + "\n" +
         rows.map(row => row.map(field =>
-          `"${(field ?? "").toString().replace(/"/g, '""')}"`
+          `"${field.toString().replace(/"/g, '""')}"`
         ).join(",")).join("\n");
 
       const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -277,54 +354,47 @@ const Dashboard = () => {
       document.body.removeChild(link);
     } else {
       const headers = [
-        "PRJ core alignment",
         "Employee ID",
         "Name",
-        "Core alignment",
+        "Core Alignment",
         "Core Team",
-        "Job Title",
-        "Role type",
-        "Skills",
-        "Email",
-        "Vendor",
-        "Contact Number",
-        "Team Name",
         "Secondary Team",
-        "Manager Name",
-        "Status",
-        "Location",
+        "Email",
+        "Contact Number",
         "Hire Date",
         "Termination Date",
-        "Modified By",
-        "Modified at",
+        "Job Title",
+        "Role Type",
+        "Location",
+        "Manager",
+        "Vendor",
+        "Skills",
+        "Status"
       ];
 
       const rows = employees.map(emp => [
-        emp.prj_align,
-        emp.emp_id,
-        emp.resource_name,
-        emp.core_alignment,
-        emp.core_team,
-        emp.job_title,
-        emp.role_type,
-        emp.email_id,
-        emp.vendor,
-        emp.contact_number,
-        emp.team_name,
-        emp.secondary_team,
-        emp.manager_name,
-        emp.status,
-        emp.base_location,
-        emp.hire_date,
-        emp.term_date,
-        emp.modified_by,
-        emp.modified_at,
+        emp.employeeId,
+        emp.name,
+        emp.coreAlignment || '',
+        emp.coreTeam || '',
+        emp.secondaryTeam || '',
+        emp.email || '',
+        emp.contactNumber || '',
+        emp.dateOfJoining ? new Date(emp.dateOfJoining).toLocaleDateString() : '',
+        emp.dateOfTermination ? new Date(emp.dateOfTermination).toLocaleDateString() : '',
+        emp.jobTitle || '',
+        emp.roleType,
+        emp.baseLocation || '',
+        emp.manager || '',
+        emp.vendor || '',
+        emp.skills.join(', '),
+        emp.status
       ]);
 
       let csvContent =
         headers.join(",") + "\n" +
         rows.map(row => row.map(field =>
-          `"${(field ?? "").toString().replace(/"/g, '""')}"`
+          `"${field.toString().replace(/"/g, '""')}"`
         ).join(",")).join("\n");
 
       const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -338,8 +408,10 @@ const Dashboard = () => {
     }
   }, [selectedPage, hiringData, employees]);
 
+  const selectedCount = selectedPage === 'Hiring' ? selectedHiring.length : selectedEmployees.length;
+
   return (
-    <div className="flex flex-col h-screen w-full p-4">
+    <div className="flex flex-col h-screen w-full p-4 overflow-hidden">
       <div className="flex md:items-center flex-col gap-2 md:flex-row justify-between mb-4 sm:space-y-0">
         <div className="flex flex-wrap items-center space-x-4">
           <div className="flex flex-col sm:w-auto">
@@ -381,6 +453,15 @@ const Dashboard = () => {
         </div>
 
         <div className="flex items-center flex-wrap gap-1 space-x-2">
+          {selectedCount > 0 && (
+            <button
+              onClick={selectedPage === 'Hiring' ? handleDeleteSelectedHiring : handleDeleteSelectedEmployees}
+              className="h-8 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded text-sm font-medium flex items-center space-x-1"
+            >
+              Delete Selected ({selectedCount})
+            </button>
+          )}
+          
           <button
             onClick={handleAddFilter}
             className="cursor-pointer h-8 hover:bg-blue-900 text-white px-4 py-2 rounded text-sm font-medium flex items-center space-x-1" style={{ background: '#003a72' }}
@@ -466,7 +547,7 @@ const Dashboard = () => {
         </div>
       )}
 
-      <div className='flex-1 my-2'>
+      <div className='flex-1 my-2 min-h-0'>
         {selectedPage === 'Hiring' ? (
           <HiringTable
             hiringData={paginatedData as Hiring[]}
@@ -477,6 +558,8 @@ const Dashboard = () => {
             onSelectAll={handleSelectAllHiring}
             onDeleteHiring={handleDeleteHiring}
             onEditHiring={handleEditHiring}
+            sortConfig={hiringSortConfig}
+            onSort={handleHiringSort}
           />
         ) : (
           <EmployeeTable
@@ -488,11 +571,13 @@ const Dashboard = () => {
             onSelectAll={handleSelectAllEmployees}
             onDeleteEmployee={handleDeleteEmployee}
             onEditEmployee={handleEditEmployee}
+            sortConfig={employeeSortConfig}
+            onSort={handleEmployeeSort}
           />
         )}
       </div>
 
-      <div className="flex md:items-center flex-col gap-2 md:flex-row justify-end">
+      <div className="flex md:items-center flex-col gap-2 md:flex-row justify-end flex-shrink-0">
         <div className="flex items-center space-x-2">
           <span className="text-sm text-gray-700">Entries per page</span>
           <select
@@ -571,10 +656,9 @@ const Dashboard = () => {
 
       <EditHiringModal
         isOpen={editHiringModal.isOpen}
-        onClose={() => setEditHiringModal({ isOpen: false, hiring: null, index: -1 })}
+        onClose={() => setEditHiringModal({ isOpen: false, hiring: null })}
         onSave={handleSaveHiring}
         hiring={editHiringModal.hiring}
-        index={editHiringModal.index}
       />
 
       <AddPersonModal isOpen={isAddPersonModal} onClose={() => setIsAddPersonModal(false)} />

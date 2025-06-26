@@ -1,48 +1,61 @@
 import React, { useState, useEffect, memo } from 'react';
 import { X, Save, Briefcase } from 'lucide-react';
 import { Hiring } from '../types/Hiring';
+import SkillsInput from './SkillsInput';
 
 interface EditHiringModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (hiring: Hiring, index: number) => void;
+  onSave: (hiring: Hiring) => void;
   hiring: Hiring | null;
-  index: number;
 }
 
 const EditHiringModal: React.FC<EditHiringModalProps> = memo(({
   isOpen,
   onClose,
   onSave,
-  hiring,
-  index
+  hiring
 }) => {
   const [formData, setFormData] = useState<Hiring>({
+    id: '',
     team: '',
-    req_fg: '',
-    sharepoint_id: '',
-    incremental_backfill: '',
-    skill_set: '',
-    el_level: '',
-    resource: '',
+    requisitionType: '',
+    sharepointId: '',
+    incrementalType: '',
+    skills: [],
+    experienceLevel: '',
+    candidateName: '',
     remarks: '',
-    status: '',
+    status: 'Active hiring',
     vendor: '',
-    hiring_manager: ''
+    hiringManager: '',
+    updatedBy: '',
+    createdBy: '',
+    createdAt: null,
+    updatedAt: null
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [suggestions, setSuggestions] = useState<Record<string, string[]>>({});
+  const [showSuggestions, setShowSuggestions] = useState<Record<string, boolean>>({});
+
+  // Auto-suggestion data
+  const suggestionData = {
+    skills: [
+      'React', 'JavaScript', 'TypeScript', 'Java', 'Spring Boot', 'Kafka', 'PostgreSQL',
+      'Docker', 'AWS', 'Kubernetes', 'Python', 'Machine Learning', 'SQL', 'Node.js',
+      'Angular', 'Vue.js', 'MongoDB', 'Redis', 'Jenkins', 'Terraform', 'Infrastructure',
+      'Gen AI', 'DevOps', 'API Testing', 'Automation'
+    ],
+    team: [
+      'Coral/Atlantis/Achievers', 'Skyrocket', 'Achievers', 'OFS', 'Engineering Team A',
+      'Engineering Team B', 'Product Team', 'Design Team', 'QA Team', 'Infrastructure Team'
+    ]
+  };
 
   const statusOptions = ['Hired', 'Active hiring', 'To be approved', 'Approved', 'Need to ask profiles', 'On Hold', 'Cancelled'];
   const vendorOptions = ['PS', 'CTS', 'TCS', 'Infosys', 'Wipro', 'Accenture'];
-  const hiringManagerOptions = [
-    'Keshav',
-    'Kunjal',
-    'Sarah Mitchell',
-    'David Thompson',
-    'Emily Rodriguez',
-    'Michael Chen'
-  ];
+  const hiringManagerOptions = ['Keshav', 'Kunjal', 'Sarah Mitchell', 'David Thompson', 'Emily Rodriguez', 'Michael Chen'];
 
   useEffect(() => {
     if (hiring) {
@@ -53,20 +66,21 @@ const EditHiringModal: React.FC<EditHiringModalProps> = memo(({
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
 
+    // Required fields
+    if (!formData.candidateName.trim()) {
+      newErrors.candidateName = 'Candidate name is required';
+    }
     if (!formData.team.trim()) {
       newErrors.team = 'Team is required';
     }
-    if (!formData.skill_set.trim()) {
-      newErrors.skill_set = 'Skill set is required';
+    if (!formData.experienceLevel?.trim()) {
+      newErrors.experienceLevel = 'Experience level is required';
     }
-    if (!formData.el_level.trim()) {
-      newErrors.el_level = 'EL Level is required';
+    if (!formData.hiringManager.trim()) {
+      newErrors.hiringManager = 'Hiring manager is required';
     }
     if (!formData.status.trim()) {
       newErrors.status = 'Status is required';
-    }
-    if (!formData.hiring_manager.trim()) {
-      newErrors.hiring_manager = 'Hiring manager is required';
     }
 
     setErrors(newErrors);
@@ -76,17 +90,85 @@ const EditHiringModal: React.FC<EditHiringModalProps> = memo(({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (validateForm()) {
-      onSave(formData, index);
+      const updatedHiring = {
+        ...formData,
+        updatedAt: new Date().toISOString(),
+        updatedBy: 'Current User' // In real app, this would be the logged-in user
+      };
+      onSave(updatedHiring);
       onClose();
     }
   };
 
-  const handleInputChange = (field: keyof Hiring, value: string) => {
+  const handleInputChange = (field: keyof Hiring, value: string | string[]) => {
     setFormData(prev => ({ ...prev, [field]: value }));
     if (errors[field]) {
       setErrors(prev => ({ ...prev, [field]: '' }));
     }
+
+    // Handle auto-suggestions for string fields
+    if (typeof value === 'string' && suggestionData[field as keyof typeof suggestionData]) {
+      const fieldSuggestions = suggestionData[field as keyof typeof suggestionData];
+      const filteredSuggestions = fieldSuggestions.filter(suggestion =>
+        suggestion.toLowerCase().includes(value.toLowerCase())
+      );
+      setSuggestions(prev => ({ ...prev, [field]: filteredSuggestions }));
+      setShowSuggestions(prev => ({ ...prev, [field]: value.length > 0 && filteredSuggestions.length > 0 }));
+    }
   };
+
+  const handleSuggestionClick = (field: keyof Hiring, suggestion: string) => {
+    setFormData(prev => ({ ...prev, [field]: suggestion }));
+    setShowSuggestions(prev => ({ ...prev, [field]: false }));
+  };
+
+  const renderInputWithSuggestions = (
+    field: keyof Hiring,
+    label: string,
+    placeholder: string,
+    required: boolean = false
+  ) => (
+    <div className="flex flex-col relative">
+      <label className="block text-sm font-medium text-gray-700 mb-2">
+        {label} {required && <span className="text-red-500">*</span>}
+      </label>
+      <input
+        type="text"
+        value={(formData[field] as string) || ''}
+        onChange={(e) => handleInputChange(field, e.target.value)}
+        onFocus={() => {
+          if (suggestionData[field as keyof typeof suggestionData]) {
+            const fieldSuggestions = suggestionData[field as keyof typeof suggestionData];
+            setSuggestions(prev => ({ ...prev, [field]: fieldSuggestions }));
+            setShowSuggestions(prev => ({ ...prev, [field]: true }));
+          }
+        }}
+        onBlur={() => {
+          setTimeout(() => setShowSuggestions(prev => ({ ...prev, [field]: false })), 200);
+        }}
+        placeholder={placeholder}
+        className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+          errors[field] ? 'border-red-300' : 'border-gray-300'
+        }`}
+      />
+      {showSuggestions[field] && suggestions[field] && suggestions[field].length > 0 && (
+        <div className="absolute top-full left-0 right-0 bg-white border border-gray-300 rounded-md shadow-lg z-10 max-h-40 overflow-y-auto">
+          {suggestions[field].slice(0, 5).map((suggestion, index) => (
+            <div
+              key={index}
+              className="px-3 py-2 hover:bg-gray-100 cursor-pointer text-sm"
+              onMouseDown={() => handleSuggestionClick(field, suggestion)}
+            >
+              {suggestion}
+            </div>
+          ))}
+        </div>
+      )}
+      {errors[field] && (
+        <p className="mt-1 text-sm text-red-600">{errors[field]}</p>
+      )}
+    </div>
+  );
 
   if (!isOpen || !hiring) return null;
 
@@ -98,7 +180,7 @@ const EditHiringModal: React.FC<EditHiringModalProps> = memo(({
           onClick={onClose}
         />
 
-        <div className="relative bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] flex flex-col">
+        <div className="relative bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[85vh] flex flex-col">
           <div className="flex items-center justify-between p-6 border-b border-gray-200">
             <div className="flex items-center">
               <div className="flex-shrink-0 flex items-center justify-center h-10 w-10 rounded-full bg-blue-100">
@@ -119,123 +201,66 @@ const EditHiringModal: React.FC<EditHiringModalProps> = memo(({
           <div className="overflow-y-auto flex-1 p-6">
             <form onSubmit={handleSubmit} className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Team - Now a text input */}
+                {/* Candidate Name */}
                 <div className="flex flex-col">
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Team <span className="text-red-500">*</span>
+                    Candidate Name <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="text"
-                    value={formData.team}
-                    onChange={(e) => handleInputChange('team', e.target.value)}
+                    value={formData.candidateName}
+                    onChange={(e) => handleInputChange('candidateName', e.target.value)}
                     className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                      errors.team ? 'border-red-300' : 'border-gray-300'
+                      errors.candidateName ? 'border-red-300' : 'border-gray-300'
                     }`}
                   />
-                  {errors.team && (
-                    <p className="mt-1 text-sm text-red-600">{errors.team}</p>
+                  {errors.candidateName && (
+                    <p className="mt-1 text-sm text-red-600">{errors.candidateName}</p>
                   )}
                 </div>
 
-                {/* REQ/FG */}
-                <div className="flex flex-col">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    REQ/FG
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.req_fg}
-                    onChange={(e) => handleInputChange('req_fg', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
+                {/* Team */}
+                {renderInputWithSuggestions('team', 'Team', 'Enter team name', true)}
 
-                {/* Sharepoint ID */}
+                {/* Experience Level */}
                 <div className="flex flex-col">
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Sharepoint ID
+                    Experience Level <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="text"
-                    value={formData.sharepoint_id}
-                    onChange={(e) => handleInputChange('sharepoint_id', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-
-                {/* Incremental/Backfill */}
-                <div className="flex flex-col">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Incremental/Backfill
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.incremental_backfill}
-                    onChange={(e) => handleInputChange('incremental_backfill', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-
-                {/* Skill Set */}
-                <div className="flex flex-col">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Skill Set <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.skill_set}
-                    onChange={(e) => handleInputChange('skill_set', e.target.value)}
+                    value={formData.experienceLevel || ''}
+                    onChange={(e) => handleInputChange('experienceLevel', e.target.value)}
+                    placeholder="e.g., EL3, EL4"
                     className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                      errors.skill_set ? 'border-red-300' : 'border-gray-300'
+                      errors.experienceLevel ? 'border-red-300' : 'border-gray-300'
                     }`}
                   />
-                  {errors.skill_set && (
-                    <p className="mt-1 text-sm text-red-600">{errors.skill_set}</p>
+                  {errors.experienceLevel && (
+                    <p className="mt-1 text-sm text-red-600">{errors.experienceLevel}</p>
                   )}
                 </div>
 
-                {/* EL Level - Now a text input */}
+                {/* Hiring Manager */}
                 <div className="flex flex-col">
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    EL Level <span className="text-red-500">*</span>
+                    Hiring Manager <span className="text-red-500">*</span>
                   </label>
-                  <input
-                    type="text"
-                    value={formData.el_level}
-                    onChange={(e) => handleInputChange('el_level', e.target.value)}
+                  <select
+                    value={formData.hiringManager}
+                    onChange={(e) => handleInputChange('hiringManager', e.target.value)}
                     className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                      errors.el_level ? 'border-red-300' : 'border-gray-300'
+                      errors.hiringManager ? 'border-red-300' : 'border-gray-300'
                     }`}
-                  />
-                  {errors.el_level && (
-                    <p className="mt-1 text-sm text-red-600">{errors.el_level}</p>
+                  >
+                    <option value="">Select Hiring Manager</option>
+                    {hiringManagerOptions.map(option => (
+                      <option key={option} value={option}>{option}</option>
+                    ))}
+                  </select>
+                  {errors.hiringManager && (
+                    <p className="mt-1 text-sm text-red-600">{errors.hiringManager}</p>
                   )}
-                </div>
-
-                {/* Resource */}
-                <div className="flex flex-col">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Resource
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.resource}
-                    onChange={(e) => handleInputChange('resource', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-
-                {/* Remarks */}
-                <div className="flex flex-col">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Remarks
-                  </label>
-                  <textarea
-                    value={formData.remarks}
-                    onChange={(e) => handleInputChange('remarks', e.target.value)}
-                    rows={3}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
                 </div>
 
                 {/* Status */}
@@ -260,13 +285,52 @@ const EditHiringModal: React.FC<EditHiringModalProps> = memo(({
                   )}
                 </div>
 
+                {/* Requisition Type */}
+                <div className="flex flex-col">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Requisition Type
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.requisitionType || ''}
+                    onChange={(e) => handleInputChange('requisitionType', e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+
+                {/* Sharepoint ID */}
+                <div className="flex flex-col">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Sharepoint ID
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.sharepointId || ''}
+                    onChange={(e) => handleInputChange('sharepointId', e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+
+                {/* Incremental Type */}
+                <div className="flex flex-col">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Incremental Type
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.incrementalType || ''}
+                    onChange={(e) => handleInputChange('incrementalType', e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+
                 {/* Vendor */}
                 <div className="flex flex-col">
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Vendor
                   </label>
                   <select
-                    value={formData.vendor}
+                    value={formData.vendor || ''}
                     onChange={(e) => handleInputChange('vendor', e.target.value)}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
@@ -277,27 +341,31 @@ const EditHiringModal: React.FC<EditHiringModalProps> = memo(({
                   </select>
                 </div>
 
-                {/* Hiring Manager */}
-                <div className="flex flex-col">
+                {/* Remarks */}
+                <div className="flex flex-col md:col-span-2">
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Hiring Manager <span className="text-red-500">*</span>
+                    Remarks
                   </label>
-                  <select
-                    value={formData.hiring_manager}
-                    onChange={(e) => handleInputChange('hiring_manager', e.target.value)}
-                    className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                      errors.hiring_manager ? 'border-red-300' : 'border-gray-300'
-                    }`}
-                  >
-                    <option value="">Select Hiring Manager</option>
-                    {hiringManagerOptions.map(option => (
-                      <option key={option} value={option}>{option}</option>
-                    ))}
-                  </select>
-                  {errors.hiring_manager && (
-                    <p className="mt-1 text-sm text-red-600">{errors.hiring_manager}</p>
-                  )}
+                  <textarea
+                    value={formData.remarks || ''}
+                    onChange={(e) => handleInputChange('remarks', e.target.value)}
+                    rows={3}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
                 </div>
+              </div>
+
+              {/* Skills */}
+              <div className="flex flex-col">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Skills
+                </label>
+                <SkillsInput
+                  skills={formData.skills}
+                  onChange={(skills) => handleInputChange('skills', skills)}
+                  suggestions={suggestionData.skills}
+                  placeholder="Add a skill..."
+                />
               </div>
             </form>
           </div>

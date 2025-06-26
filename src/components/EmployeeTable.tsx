@@ -1,16 +1,19 @@
 import React, { memo } from 'react';
 import { Trash2, Edit } from 'lucide-react';
 import { Employee } from '../types/Employee';
+import SortableHeader from './SortableHeader';
 
 interface EmployeeTableProps {
   employees: Employee[];
   loading: boolean;
   isAdmin: boolean;
-  selectedEmployees: number[];
-  onSelectEmployee: (empId: number) => void;
+  selectedEmployees: string[];
+  onSelectEmployee: (empId: string) => void;
   onSelectAll: (selected: boolean) => void;
-  onDeleteEmployee: (empId: number) => void;
+  onDeleteEmployee: (empId: string) => void;
   onEditEmployee: (employee: Employee) => void;
+  sortConfig: { key: string; direction: 'asc' | 'desc' } | null;
+  onSort: (key: string) => void;
 }
 
 const EmployeeTable: React.FC<EmployeeTableProps> = memo(({ 
@@ -21,18 +24,20 @@ const EmployeeTable: React.FC<EmployeeTableProps> = memo(({
   onSelectEmployee, 
   onSelectAll,
   onDeleteEmployee,
-  onEditEmployee
+  onEditEmployee,
+  sortConfig,
+  onSort
 }) => {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'Active':
-        return 'bg-green-100 text-green-800'; // #CFE8CC background, #22543D text
+        return 'bg-green-100 text-green-800';
       case 'Inactive':
-        return 'bg-red-100 text-red-800'; // #F3C1C6 background, #9B1C1C text
+        return 'bg-red-100 text-red-800';
       case 'Open':
-        return 'bg-yellow-100 text-yellow-800'; // #FFE9A9 background, #7B341E text
-      case 'To Be Approved':
-        return 'bg-blue-100 text-blue-800'; // #B5D3E7 background, #1C3D5A text
+        return 'bg-yellow-100 text-yellow-800';
+      case 'Term':
+        return 'bg-gray-100 text-gray-800';
       default:
         return 'bg-gray-100 text-gray-800';
     }
@@ -41,14 +46,29 @@ const EmployeeTable: React.FC<EmployeeTableProps> = memo(({
   const getRoleTypeColor = (roleType: string) => {
     switch (roleType) {
       case 'Engineering':
-        return 'bg-blue-100 text-blue-800'; // #A7C7E7 background, #1E3A8A text
-      case 'Non Engineering':
-        return 'bg-purple-100 text-purple-800'; // #D5B8FF background, #5B21B6 text
+        return 'bg-blue-100 text-blue-800';
+      case 'NonEngineering':
+        return 'bg-purple-100 text-purple-800';
       case 'Both':
-        return 'bg-green-100 text-green-800'; // #B5EAD7 background, #065F46 text
+        return 'bg-green-100 text-green-800';
       default:
         return 'bg-gray-100 text-gray-800';
     }
+  };
+
+  const formatPhoneNumber = (phoneNumber: string) => {
+    if (!phoneNumber) return '';
+    const cleaned = phoneNumber.replace(/\D/g, '');
+    const match = cleaned.match(/^(\d{3})(\d{3})(\d{4})$/);
+    if (match) {
+      return `(${match[1]}) ${match[2]}-${match[3]}`;
+    }
+    return phoneNumber;
+  };
+
+  const formatDate = (date: string | Date | null) => {
+    if (!date) return '-';
+    return new Date(date).toLocaleDateString();
   };
 
   const isAllSelected = employees.length > 0 && selectedEmployees.length === employees.length;
@@ -66,8 +86,8 @@ const EmployeeTable: React.FC<EmployeeTableProps> = memo(({
   }
 
   return (
-    <div className="flex flex-col bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-      <div className="flex-1 overflow-x-auto">
+    <div className="flex flex-col bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden h-full">
+      <div className="flex-1 overflow-auto">
         <table className="w-full min-w-max">
           <thead className="bg-gray-50 border-b border-gray-200 sticky top-0">
             <tr>
@@ -84,20 +104,47 @@ const EmployeeTable: React.FC<EmployeeTableProps> = memo(({
                   />
                 </th>
               )}
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[120px]">
-                PRJ Core Alignment
-              </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[100px]">
+              <SortableHeader
+                sortKey="employeeId"
+                currentSort={sortConfig}
+                onSort={onSort}
+                className="min-w-[120px]"
+              >
                 Employee ID
-              </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[150px]">
+              </SortableHeader>
+              <SortableHeader
+                sortKey="name"
+                currentSort={sortConfig}
+                onSort={onSort}
+                className="min-w-[150px]"
+              >
                 Name
-              </th>
+              </SortableHeader>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[140px]">
                 Core Alignment
               </th>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[120px]">
                 Core Team
+              </th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[120px]">
+                Secondary Team
+              </th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[200px]">
+                Email
+              </th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[130px]">
+                Contact Number
+              </th>
+              <SortableHeader
+                sortKey="dateOfJoining"
+                currentSort={sortConfig}
+                onSort={onSort}
+                className="min-w-[120px]"
+              >
+                Hire Date
+              </SortableHeader>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[130px]">
+                Termination Date
               </th>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[150px]">
                 Job Title
@@ -105,41 +152,23 @@ const EmployeeTable: React.FC<EmployeeTableProps> = memo(({
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[120px]">
                 Role Type
               </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[200px]">
-                Skills
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[120px]">
+                Location
               </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[200px]">
-                Email
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[130px]">
+                Manager
               </th>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[120px]">
                 Vendor
               </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[130px]">
-                Contact Number
-              </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[150px]">
-                Team Name
-              </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[140px]">
-                Secondary Team
-              </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[130px]">
-                Manager Name
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[200px]">
+                Skills
               </th>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[100px]">
                 Status
               </th>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[120px]">
-                Location
-              </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[110px]">
-                Hire Date
-              </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[130px]">
-                Termination Date
-              </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[120px]">
-                Modified By
+                Updated By
               </th>
               {isAdmin && (
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[100px]">
@@ -151,7 +180,7 @@ const EmployeeTable: React.FC<EmployeeTableProps> = memo(({
           <tbody className="bg-white divide-y divide-gray-200">
             {employees.length === 0 ? (
               <tr>
-                <td colSpan={isAdmin ? 22 : 21} className="px-6 py-12 text-center text-gray-500">
+                <td colSpan={isAdmin ? 18 : 17} className="px-6 py-12 text-center text-gray-500">
                   <div className="flex flex-col items-center">
                     <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
                       <span className="text-2xl text-gray-400">📊</span>
@@ -164,68 +193,82 @@ const EmployeeTable: React.FC<EmployeeTableProps> = memo(({
             ) : (
               employees.map((employee, index) => (
                 <tr 
-                  key={employee.emp_id} 
+                  key={employee.id} 
                   className={`hover:bg-gray-50 transition-colors ${
                     index % 2 === 0 ? 'bg-white' : 'bg-gray-25'
-                  } ${selectedEmployees.includes(employee.emp_id) ? 'bg-blue-50' : ''}`}
+                  } ${selectedEmployees.includes(employee.id) ? 'bg-blue-50' : ''}`}
                 >
                   {isAdmin && (
                     <td className="px-4 py-3 whitespace-nowrap">
                       <input
                         type="checkbox"
-                        checked={selectedEmployees.includes(employee.emp_id)}
-                        onChange={() => onSelectEmployee(employee.emp_id)}
+                        checked={selectedEmployees.includes(employee.id)}
+                        onChange={() => onSelectEmployee(employee.id)}
                         className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
                       />
                     </td>
                   )}
                   <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">
-                    {employee.prj_align}
-                  </td>
-                  <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">
-                    {employee.emp_id}
+                    {employee.employeeId}
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap">
-                    <div className="text-sm font-medium text-gray-900">{employee.resource_name}</div>
+                    <div className="text-sm font-medium text-gray-900">{employee.name}</div>
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
-                    {employee.core_alignment}
+                    {employee.coreAlignment || '-'}
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
-                    {employee.core_team}
+                    {employee.coreTeam || '-'}
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
-                    {employee.job_title}
-                  </td>
-                  <td className="px-4 py-3 whitespace-nowrap">
-                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getRoleTypeColor(employee.role_type)}`}>
-                      {employee.role_type}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 max-w-[200px]">
-                    <div className="truncate" title={employee.skills}>
-                      {employee.skills}
-                    </div>
+                    {employee.secondaryTeam || '-'}
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap text-sm text-blue-600 hover:text-blue-800">
-                    <a href={`mailto:${employee.email_id}`}>{employee.email_id}</a>
+                    {employee.email ? (
+                      <a href={`mailto:${employee.email}`}>{employee.email}</a>
+                    ) : '-'}
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
-                    {employee.vendor}
+                    {employee.contactNumber ? (
+                      <a href={`tel:${employee.contactNumber}`} className="text-blue-600 hover:text-blue-800">
+                        {formatPhoneNumber(employee.contactNumber)}
+                      </a>
+                    ) : '-'}
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
-                    <a href={`tel:${employee.contact_number}`} className="text-blue-600 hover:text-blue-800">
-                      {employee.contact_number}
-                    </a>
+                    {formatDate(employee.dateOfJoining)}
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
-                    {employee.team_name}
+                    {formatDate(employee.dateOfTermination)}
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
-                    {employee.secondary_team}
+                    {employee.jobTitle || '-'}
+                  </td>
+                  <td className="px-4 py-3 whitespace-nowrap">
+                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getRoleTypeColor(employee.roleType)}`}>
+                      {employee.roleType}
+                    </span>
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
-                    {employee.manager_name}
+                    {employee.baseLocation || '-'}
+                  </td>
+                  <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
+                    {employee.manager || '-'}
+                  </td>
+                  <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
+                    {employee.vendor || '-'}
+                  </td>
+                  <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 max-w-[200px]">
+                    <div className="flex flex-wrap gap-1">
+                      {employee.skills.slice(0, 3).map((skill, idx) => (
+                        <span key={idx} className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
+                          {skill}
+                        </span>
+                      ))}
+                      {employee.skills.length > 3 && (
+                        <span className="text-xs text-gray-500">+{employee.skills.length - 3} more</span>
+                      )}
+                    </div>
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap">
                     <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(employee.status)}`}>
@@ -233,18 +276,9 @@ const EmployeeTable: React.FC<EmployeeTableProps> = memo(({
                     </span>
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
-                    {employee.base_location}
-                  </td>
-                  <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
-                    {new Date(employee.hire_date).toLocaleDateString()}
-                  </td>
-                  <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
-                    {employee.term_date ? new Date(employee.term_date).toLocaleDateString() : '-'}
-                  </td>
-                  <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
-                    <div>{employee.modified_by}</div>
+                    <div>{employee.updatedBy || '-'}</div>
                     <div className="text-xs text-gray-500">
-                      {new Date(employee.modified_at).toLocaleDateString()}
+                      {formatDate(employee.updatedAt)}
                     </div>
                   </td>
                   {isAdmin && (
@@ -258,7 +292,7 @@ const EmployeeTable: React.FC<EmployeeTableProps> = memo(({
                           <Edit className="w-4 h-4" />
                         </button>
                         <button
-                          onClick={() => onDeleteEmployee(employee.emp_id)}
+                          onClick={() => onDeleteEmployee(employee.id)}
                           className="text-red-600 hover:text-red-800 transition-colors p-1 rounded hover:bg-red-50"
                           title="Delete employee"
                         >
