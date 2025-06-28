@@ -103,6 +103,9 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = memo(({
     if (!formData.coreAlignment?.trim()) {
       newErrors.coreAlignment = 'Core alignment is required';
     }
+    if (!formData.baseLocation?.trim()) {
+      newErrors.baseLocation = 'Base location is required';
+    }
 
     // Date validation
     if (formData.dateOfJoining && formData.dateOfTermination) {
@@ -435,7 +438,7 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = memo(({
                 {renderInputWithSuggestions('secondaryTeam', 'Secondary Team', 'Select secondary team')}
 
                 {/* Base Location */}
-                {renderInputWithSuggestions('baseLocation', 'Base Location', 'Enter location')}
+                {renderInputWithSuggestions('baseLocation', 'Base Location', 'Enter location', true)}
 
                 {/* Vendor */}
                 <div className="flex flex-col">

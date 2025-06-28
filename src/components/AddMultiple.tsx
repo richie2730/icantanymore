@@ -4,9 +4,10 @@ import { X, Upload, FileSpreadsheet } from 'lucide-react';
 interface ModalProps {
   isOpen: boolean;
   onClose: () => void;
+  type?: 'employee' | 'hiring';
 }
 
-const AddMultiple: React.FC<ModalProps> = ({ isOpen, onClose }) => {
+const AddMultiple: React.FC<ModalProps> = ({ isOpen, onClose, type = 'employee' }) => {
   const [dragActive, setDragActive] = useState(false);
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -76,11 +77,30 @@ const AddMultiple: React.FC<ModalProps> = ({ isOpen, onClose }) => {
     }
   };
 
+  const getInstructions = () => {
+    if (type === 'hiring') {
+      return {
+        title: 'Add New Hiring',
+        requiredColumns: 'Required columns: Candidate Name, Team, Experience Level, Hiring Manager, Status',
+        optionalColumns: 'Optional columns: Requisition Type, Sharepoint ID, Incremental Type, Skills, Vendor, Remarks',
+        templateData: 'John Doe,Engineering Team A,EL3,Keshav,Active hiring,UHGJP00103805,2025-Rossin_2518,,"React,Java",PS,Initial screening completed'
+      };
+    }
+    return {
+      title: 'Add New Employee',
+      requiredColumns: 'Required columns: Employee ID, Name, Email, Contact Number, Hire Date, Core Team, Manager, Job Title, Core Alignment, Base Location',
+      optionalColumns: 'Optional columns: Secondary Team, Vendor, Skills, Role Type, Status',
+      templateData: 'E1001,John Doe,john.doe@company.com,5551234567,2024-01-15,Engineering Team A,Sarah Mitchell,Senior Developer,Frontend Development,New York NY,UI/UX Team,TechCorp,"React,JavaScript,TypeScript",Engineering,Active'
+    };
+  };
+
+  const instructions = getInstructions();
+
   return (
     <div className="fixed inset-0 bg-black bg-opacity-40 flex justify-center items-center z-50 p-4">
       <div className="bg-white rounded-lg w-full max-w-2xl max-h-[90vh] flex flex-col">
         <div className="flex justify-between items-center p-6 border-b border-gray-200 bg-orange-500 text-white rounded-t-lg">
-          <h2 className="text-xl font-bold">Add Multiple Employees</h2>
+          <h2 className="text-xl font-bold">{instructions.title}</h2>
           <button 
             onClick={onClose} 
             className="text-white hover:text-gray-200 transition-colors"
@@ -162,8 +182,8 @@ const AddMultiple: React.FC<ModalProps> = ({ isOpen, onClose }) => {
               <h3 className="font-medium text-blue-900 mb-2">File Format Instructions:</h3>
               <ul className="text-sm text-blue-800 space-y-1">
                 <li>• Excel file should contain headers in the first row</li>
-                <li>• Required columns: Employee ID, Name, Email, Contact Number, Hire Date, Core Team, Manager, Job Title, Core Alignment</li>
-                <li>• Optional columns: Secondary Team, Base Location, Vendor, Skills, Role Type, Status</li>
+                <li>• {instructions.requiredColumns}</li>
+                <li>• {instructions.optionalColumns}</li>
                 <li>• Skills should be comma-separated in a single cell</li>
                 <li>• Date format should be MM/DD/YYYY or YYYY-MM-DD</li>
               </ul>
@@ -178,19 +198,17 @@ const AddMultiple: React.FC<ModalProps> = ({ isOpen, onClose }) => {
               <button
                 onClick={() => {
                   // Create and download sample template
-                  const headers = [
-                    'Employee ID', 'Name', 'Email', 'Contact Number', 'Hire Date',
-                    'Core Team', 'Manager', 'Job Title', 'Core Alignment', 'Secondary Team',
-                    'Base Location', 'Vendor', 'Skills', 'Role Type', 'Status'
-                  ];
-                  const csvContent = headers.join(',') + '\n' +
-                    'E1001,John Doe,john.doe@company.com,5551234567,2024-01-15,Engineering Team A,Sarah Mitchell,Senior Developer,Frontend Development,UI/UX Team,New York NY,"React,JavaScript,TypeScript",Engineering,Active';
+                  const headers = type === 'hiring' 
+                    ? ['Candidate Name', 'Team', 'Experience Level', 'Hiring Manager', 'Status', 'Requisition Type', 'Sharepoint ID', 'Incremental Type', 'Skills', 'Vendor', 'Remarks']
+                    : ['Employee ID', 'Name', 'Email', 'Contact Number', 'Hire Date', 'Core Team', 'Manager', 'Job Title', 'Core Alignment', 'Base Location', 'Secondary Team', 'Vendor', 'Skills', 'Role Type', 'Status'];
+                  
+                  const csvContent = headers.join(',') + '\n' + instructions.templateData;
                   
                   const blob = new Blob([csvContent], { type: 'text/csv' });
                   const url = URL.createObjectURL(blob);
                   const link = document.createElement('a');
                   link.href = url;
-                  link.download = 'employee_template.csv';
+                  link.download = `${type}_template.csv`;
                   document.body.appendChild(link);
                   link.click();
                   document.body.removeChild(link);

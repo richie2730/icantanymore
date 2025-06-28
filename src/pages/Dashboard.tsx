@@ -457,17 +457,15 @@ const Dashboard = () => {
                   >
                     Add New {selectedPage === 'Hiring' ? 'Hiring Record' : 'Employee'}
                   </button>
-                  {selectedPage === 'Employee' && (
-                    <button
-                      onClick={() => {
-                        setIsAddMultipleModal(true);
-                        setShowDropdown(false);
-                      }}
-                      className="cursor-pointer text-gray-700 block w-full text-left px-4 py-2 text-sm hover:bg-gray-100"
-                    >
-                      Add Multiple Employees
-                    </button>
-                  )}
+                  <button
+                    onClick={() => {
+                      setIsAddMultipleModal(true);
+                      setShowDropdown(false);
+                    }}
+                    className="cursor-pointer text-gray-700 block w-full text-left px-4 py-2 text-sm hover:bg-gray-100"
+                  >
+                    Add Multiple {selectedPage === 'Hiring' ? 'Records' : 'Employees'}
+                  </button>
                 </div>
               </div>
             )}
@@ -626,7 +624,11 @@ const Dashboard = () => {
         onSave={handleAddHiring}
       />
 
-      <AddMultiple isOpen={isAddMultipleModal} onClose={() => setIsAddMultipleModal(false)} />
+      <AddMultiple 
+        isOpen={isAddMultipleModal} 
+        onClose={() => setIsAddMultipleModal(false)}
+        type={selectedPage === 'Hiring' ? 'hiring' : 'employee'}
+      />
     </div>
   );
 };
