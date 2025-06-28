@@ -99,11 +99,11 @@ const AddMultiple: React.FC<ModalProps> = ({ isOpen, onClose, type = 'employee' 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-40 flex justify-center items-center z-50 p-4">
       <div className="bg-white rounded-lg w-full max-w-2xl max-h-[90vh] flex flex-col">
-        <div className="flex justify-between items-center p-6 border-b border-gray-200 bg-orange-500 text-white rounded-t-lg">
-          <h2 className="text-xl font-bold">{instructions.title}</h2>
+        <div className="flex justify-between items-center p-6 border-b border-gray-200">
+          <h2 className="text-xl font-bold text-orange-600">{instructions.title}</h2>
           <button 
             onClick={onClose} 
-            className="text-white hover:text-gray-200 transition-colors"
+            className="text-gray-400 hover:text-gray-600 transition-colors"
           >
             <X className="w-6 h-6" />
           </button>

@@ -191,14 +191,9 @@ const AddHiringModal: React.FC<AddHiringModalProps> = memo(({
 
         <div className="relative bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[85vh] flex flex-col">
           <div className="flex items-center justify-between p-6 border-b border-gray-200">
-            <div className="flex items-center">
-              <div className="flex-shrink-0 flex items-center justify-center h-10 w-10 rounded-full bg-blue-100">
-                <Briefcase className="w-6 h-6 text-blue-600" />
-              </div>
-              <h3 className="ml-4 text-lg leading-6 font-medium text-orange-600">
-                Add New Hiring Record
-              </h3>
-            </div>
+            <h3 className="text-lg leading-6 font-medium text-orange-600">
+              Add New Hiring Record
+            </h3>
             <button
               onClick={onClose}
               className="text-gray-400 hover:text-gray-600 transition-colors"
