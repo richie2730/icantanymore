@@ -1,7 +1,6 @@
 import React, { memo } from 'react';
 import { Trash2, Edit } from 'lucide-react';
 import { Employee } from '../types/Employee';
-import SortableHeader from './SortableHeader';
 
 interface EmployeeTableProps {
   employees: Employee[];
@@ -12,8 +11,6 @@ interface EmployeeTableProps {
   onSelectAll: (selected: boolean) => void;
   onDeleteEmployee: (empId: string) => void;
   onEditEmployee: (employee: Employee) => void;
-  sortConfig: { key: string; direction: 'asc' | 'desc' } | null;
-  onSort: (key: string) => void;
 }
 
 const EmployeeTable: React.FC<EmployeeTableProps> = memo(({ 
@@ -24,9 +21,7 @@ const EmployeeTable: React.FC<EmployeeTableProps> = memo(({
   onSelectEmployee, 
   onSelectAll,
   onDeleteEmployee,
-  onEditEmployee,
-  sortConfig,
-  onSort
+  onEditEmployee
 }) => {
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -104,22 +99,12 @@ const EmployeeTable: React.FC<EmployeeTableProps> = memo(({
                   />
                 </th>
               )}
-              <SortableHeader
-                sortKey="employeeId"
-                currentSort={sortConfig}
-                onSort={onSort}
-                className="min-w-[120px]"
-              >
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[120px]">
                 Employee ID
-              </SortableHeader>
-              <SortableHeader
-                sortKey="name"
-                currentSort={sortConfig}
-                onSort={onSort}
-                className="min-w-[150px]"
-              >
+              </th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[150px]">
                 Name
-              </SortableHeader>
+              </th>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[140px]">
                 Core Alignment
               </th>
@@ -135,14 +120,9 @@ const EmployeeTable: React.FC<EmployeeTableProps> = memo(({
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[130px]">
                 Contact Number
               </th>
-              <SortableHeader
-                sortKey="dateOfJoining"
-                currentSort={sortConfig}
-                onSort={onSort}
-                className="min-w-[120px]"
-              >
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[120px]">
                 Hire Date
-              </SortableHeader>
+              </th>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[130px]">
                 Termination Date
               </th>

@@ -12,19 +12,20 @@ import {
 import ConfirmationModal from '../components/ConfirmationModal';
 import EditEmployeeModal from '../components/EditEmployeeModal';
 import EditHiringModal from '../components/EditHiringModal';
+import AddEmployeeModal from '../components/AddEmployeeModal';
+import AddHiringModal from '../components/AddHiringModal';
 import type { Employee } from '../types/Employee';
 import type { Hiring } from '../types/Hiring';
 import { mockEmployees } from '../data/mockData';
 import { mockHiringData } from '../data/hiringData';
 import EmployeeTable from '../components/EmployeeTable';
 import HiringTable from '../components/HiringTable';
-import AddPersonModal from "../components/AddPersonModal";
 import AddMultiple from "../components/AddMultiple";
 
 const Dashboard = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [entriesPerPage, setEntriesPerPage] = useState(50);
-  const [selectedPage, setSelectedPage] = useState('Resourcing');
+  const [selectedPage, setSelectedPage] = useState('Employee');
   const [filter, setFilter] = useState('Select');
   const [value, setValue] = useState('');
   const [goToPage, setGoToPage] = useState('');
@@ -37,10 +38,6 @@ const Dashboard = () => {
   const [isAdmin] = useState(true);
   const [selectedEmployees, setSelectedEmployees] = useState<string[]>([]);
   const [selectedHiring, setSelectedHiring] = useState<string[]>([]);
-
-  // Sorting state
-  const [employeeSortConfig, setEmployeeSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' } | null>(null);
-  const [hiringSortConfig, setHiringSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' } | null>(null);
 
   // Modal states
   const [confirmationModal, setConfirmationModal] = useState<{
@@ -71,63 +68,13 @@ const Dashboard = () => {
     hiring: null
   });
 
-  const [isAddPersonModal, setIsAddPersonModal] = useState<boolean>(false);
+  const [addEmployeeModal, setAddEmployeeModal] = useState<boolean>(false);
+  const [addHiringModal, setAddHiringModal] = useState<boolean>(false);
   const [isAddMultipleModal, setIsAddMultipleModal] = useState<boolean>(false);
 
-  // Sorting functions
-  const sortData = useCallback((data: any[], sortConfig: { key: string; direction: 'asc' | 'desc' } | null) => {
-    if (!sortConfig) return data;
-
-    return [...data].sort((a, b) => {
-      const aValue = a[sortConfig.key];
-      const bValue = b[sortConfig.key];
-
-      if (aValue === null || aValue === undefined) return 1;
-      if (bValue === null || bValue === undefined) return -1;
-
-      if (typeof aValue === 'string' && typeof bValue === 'string') {
-        const comparison = aValue.toLowerCase().localeCompare(bValue.toLowerCase());
-        return sortConfig.direction === 'asc' ? comparison : -comparison;
-      }
-
-      if (aValue < bValue) return sortConfig.direction === 'asc' ? -1 : 1;
-      if (aValue > bValue) return sortConfig.direction === 'asc' ? 1 : -1;
-      return 0;
-    });
-  }, []);
-
-  const handleEmployeeSort = useCallback((key: string) => {
-    setEmployeeSortConfig(current => {
-      if (current?.key === key) {
-        return { key, direction: current.direction === 'asc' ? 'desc' : 'asc' };
-      }
-      return { key, direction: 'asc' };
-    });
-  }, []);
-
-  const handleHiringSort = useCallback((key: string) => {
-    setHiringSortConfig(current => {
-      if (current?.key === key) {
-        return { key, direction: current.direction === 'asc' ? 'desc' : 'asc' };
-      }
-      return { key, direction: 'asc' };
-    });
-  }, []);
-
-  // Memoized sorted data
-  const sortedEmployees = useMemo(() => 
-    sortData(employees, employeeSortConfig), 
-    [employees, employeeSortConfig, sortData]
-  );
-
-  const sortedHiringData = useMemo(() => 
-    sortData(hiringData, hiringSortConfig), 
-    [hiringData, hiringSortConfig, sortData]
-  );
-
   const currentData = useMemo(() => 
-    selectedPage === 'Hiring' ? sortedHiringData : sortedEmployees, 
-    [selectedPage, sortedHiringData, sortedEmployees]
+    selectedPage === 'Hiring' ? hiringData : employees, 
+    [selectedPage, hiringData, employees]
   );
 
   const paginatedData = useMemo(() => {
@@ -190,8 +137,6 @@ const Dashboard = () => {
     setCurrentPage(1);
     setGoToPage('');
     setEntriesPerPage(50);
-    setEmployeeSortConfig(null);
-    setHiringSortConfig(null);
   }, []);
 
   // Employee handlers
@@ -251,6 +196,10 @@ const Dashboard = () => {
     );
   }, []);
 
+  const handleAddEmployee = useCallback((newEmployee: Employee) => {
+    setEmployees(prev => [...prev, newEmployee]);
+  }, []);
+
   // Hiring handlers
   const handleSelectHiring = useCallback((id: string) => {
     setSelectedHiring(prev =>
@@ -306,6 +255,10 @@ const Dashboard = () => {
         hiring.id === updatedHiring.id ? updatedHiring : hiring
       )
     );
+  }, []);
+
+  const handleAddHiring = useCallback((newHiring: Hiring) => {
+    setHiringData(prev => [...prev, newHiring]);
   }, []);
 
   const handleExportCSV = useCallback(() => {
@@ -421,7 +374,7 @@ const Dashboard = () => {
               onChange={(e) => setSelectedPage(e.target.value)}
               className="w-32 h-8 px-2 border border-gray-300 rounded text-sm bg-white cursor-pointer"
             >
-              <option value="Resourcing">Resourcing</option>
+              <option value="Employee">Employee</option>
               <option value="Hiring">Hiring</option>
             </select>
           </div>
@@ -477,30 +430,34 @@ const Dashboard = () => {
             <span>Reset</span>
           </button>
 
-          {selectedPage === 'Resourcing' && (
-            <div className="relative inline-block text-left">
-              <button
-                type="button"
-                className="cursor-pointer h-8 w-33 hover:bg-blue-900 text-white px-4 py-2 rounded text-sm font-medium flex items-center space-x-1" style={{ background: '#003a72' }}
-                onClick={() => setShowDropdown(!showDropdown)}
-              >
-                <Plus size={14} className="mr-1" />
-                Add User
-                <ChevronDown size={14} className="ml-2" />
-              </button>
+          <div className="relative inline-block text-left">
+            <button
+              type="button"
+              className="cursor-pointer h-8 w-33 hover:bg-blue-900 text-white px-4 py-2 rounded text-sm font-medium flex items-center space-x-1" style={{ background: '#003a72' }}
+              onClick={() => setShowDropdown(!showDropdown)}
+            >
+              <Plus size={14} className="mr-1" />
+              Add {selectedPage === 'Hiring' ? 'Hiring' : 'Employee'}
+              <ChevronDown size={14} className="ml-2" />
+            </button>
 
-              {showDropdown && (
-                <div className="origin-top-right absolute right-0 mt-2 w-56 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-10">
-                  <div className="py-1">
-                    <button
-                      onClick={() => {
-                        setIsAddPersonModal(true);
-                        setShowDropdown(false);
-                      }}
-                      className="cursor-pointer text-gray-700 block w-full text-left px-4 py-2 text-sm hover:bg-gray-100"
-                    >
-                      Add New User
-                    </button>
+            {showDropdown && (
+              <div className="origin-top-right absolute right-0 mt-2 w-56 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-10">
+                <div className="py-1">
+                  <button
+                    onClick={() => {
+                      if (selectedPage === 'Hiring') {
+                        setAddHiringModal(true);
+                      } else {
+                        setAddEmployeeModal(true);
+                      }
+                      setShowDropdown(false);
+                    }}
+                    className="cursor-pointer text-gray-700 block w-full text-left px-4 py-2 text-sm hover:bg-gray-100"
+                  >
+                    Add New {selectedPage === 'Hiring' ? 'Hiring Record' : 'Employee'}
+                  </button>
+                  {selectedPage === 'Employee' && (
                     <button
                       onClick={() => {
                         setIsAddMultipleModal(true);
@@ -508,13 +465,13 @@ const Dashboard = () => {
                       }}
                       className="cursor-pointer text-gray-700 block w-full text-left px-4 py-2 text-sm hover:bg-gray-100"
                     >
-                      Add Multiple Users
+                      Add Multiple Employees
                     </button>
-                  </div>
+                  )}
                 </div>
-              )}
-            </div>
-          )}
+              </div>
+            )}
+          </div>
 
           <button
             onClick={handleExportCSV}
@@ -558,8 +515,6 @@ const Dashboard = () => {
             onSelectAll={handleSelectAllHiring}
             onDeleteHiring={handleDeleteHiring}
             onEditHiring={handleEditHiring}
-            sortConfig={hiringSortConfig}
-            onSort={handleHiringSort}
           />
         ) : (
           <EmployeeTable
@@ -571,8 +526,6 @@ const Dashboard = () => {
             onSelectAll={handleSelectAllEmployees}
             onDeleteEmployee={handleDeleteEmployee}
             onEditEmployee={handleEditEmployee}
-            sortConfig={employeeSortConfig}
-            onSort={handleEmployeeSort}
           />
         )}
       </div>
@@ -661,7 +614,18 @@ const Dashboard = () => {
         hiring={editHiringModal.hiring}
       />
 
-      <AddPersonModal isOpen={isAddPersonModal} onClose={() => setIsAddPersonModal(false)} />
+      <AddEmployeeModal
+        isOpen={addEmployeeModal}
+        onClose={() => setAddEmployeeModal(false)}
+        onSave={handleAddEmployee}
+      />
+
+      <AddHiringModal
+        isOpen={addHiringModal}
+        onClose={() => setAddHiringModal(false)}
+        onSave={handleAddHiring}
+      />
+
       <AddMultiple isOpen={isAddMultipleModal} onClose={() => setIsAddMultipleModal(false)} />
     </div>
   );

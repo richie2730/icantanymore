@@ -1,7 +1,6 @@
 import React, { memo } from 'react';
 import { Trash2, Edit } from 'lucide-react';
 import { Hiring } from '../types/Hiring';
-import SortableHeader from './SortableHeader';
 
 interface HiringTableProps {
   hiringData: Hiring[];
@@ -12,8 +11,6 @@ interface HiringTableProps {
   onSelectAll: (selected: boolean) => void;
   onDeleteHiring: (id: string) => void;
   onEditHiring: (hiring: Hiring) => void;
-  sortConfig: { key: string; direction: 'asc' | 'desc' } | null;
-  onSort: (key: string) => void;
 }
 
 const HiringTable: React.FC<HiringTableProps> = memo(({ 
@@ -24,9 +21,7 @@ const HiringTable: React.FC<HiringTableProps> = memo(({
   onSelectHiring,
   onSelectAll,
   onDeleteHiring,
-  onEditHiring,
-  sortConfig,
-  onSort
+  onEditHiring
 }) => {
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -87,14 +82,9 @@ const HiringTable: React.FC<HiringTableProps> = memo(({
                   />
                 </th>
               )}
-              <SortableHeader
-                sortKey="team"
-                currentSort={sortConfig}
-                onSort={onSort}
-                className="min-w-[150px]"
-              >
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[150px]">
                 Team
-              </SortableHeader>
+              </th>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[150px]">
                 Requisition Type
               </th>
@@ -107,22 +97,12 @@ const HiringTable: React.FC<HiringTableProps> = memo(({
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[150px]">
                 Skills
               </th>
-              <SortableHeader
-                sortKey="experienceLevel"
-                currentSort={sortConfig}
-                onSort={onSort}
-                className="min-w-[100px]"
-              >
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[100px]">
                 EL Level
-              </SortableHeader>
-              <SortableHeader
-                sortKey="candidateName"
-                currentSort={sortConfig}
-                onSort={onSort}
-                className="min-w-[150px]"
-              >
+              </th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[150px]">
                 Candidate Name
-              </SortableHeader>
+              </th>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[120px]">
                 Remarks
               </th>
